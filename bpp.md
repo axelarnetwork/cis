@@ -12,12 +12,14 @@ created: 2021-10-07
 Multiple bridging technologies and protocols are being developed in the ecosystem in parallel. 
 What's common between them? They all rely on relayers to propagate information from one chain to another. This proposal standardizes the blockchain packet that can be relayed from one chain to another. 
 
-Any blockchain can deploy routers or gateways (implemented as smart contracts or at the consensus layer) that receive packets in the format proposed below. Any relayer can pick up packets from the gateway queues and deliver them to destination chains. Interoperability, bridging, and application-level protocols sit on top of the blockchain packet protocol and can write to their local chain gateways to communicate with remote chains. 
+Any blockchain can deploy routers or gateways (implemented as smart contracts or at the consensus layer or event queues) that receive packets in the format proposed below. Any relayer can pick up packets from the gateway queues and deliver them to destination chains. Interoperability, bridging, and application-level protocols sit on top of the blockchain packet protocol and can write to their local chain's gateways to communicate with remote chains. 
 
 ## Motivation
 
 Our objective is to: 
+
 a) make it easy to develop new interoperability or bridging protocols across distinct blockchains while,
+
 b) unifying and leveraging a common relay packet protocol format and relayer infrastructure to send packets from one chain to another. 
 
 Without this standard, every bridging protocol will need to roll out its own swarm of relayers just to post messages from one chain to another.  
@@ -33,7 +35,7 @@ Bridging protocols on top of it are responsible for ensuring reliable or sequent
 | uint: len(src chain_id) | byte[] src chain_id | uint: len(src address) | byte[] src address |
 | uint: len(dst chain_id) | byte[] dst chain_id | uint: len(dst address) | byte[] dst address |
 | uint: len(payload) | byte[] payload | |
-| Optional: [uint: signature type | uint: sig length | signature of packer under src address] | 
+| Optional: [uint: signature type | uint: sig length | signature of packet under src address] | 
 
 The specification mirrors the IP packet used to deliver information on the Internet. 
 
@@ -50,12 +52,11 @@ The specification mirrors the IP packet used to deliver information on the Inter
 
 ## Rationale
 
-* In a multi-chain world, relaying packets from one network to another is a basic requirement. 
-* Regardless of the underlying interoperability protocol relaying packets should be a standard and unified operation. 
+* In a multi-chain world, relaying packets from one network to another is a basic requirement. Regardless of the underlying interoperability protocol, relaying packets should be a standard and unified operation. 
 
 * How will the transaction fees be paid? 
 
-Any relay provider can register a gateway "smart contract" on-chain (or module at consensus layer) to accept incoming packets of the form above. It may set it own fee mechanism, DDOS protection techniques, or relayer policies. The callers of the gateways will be required to follow its rules to use the relay services. 
+Any relay provider can register a gateway "smart contract" on-chain (or module at consensus layer or introduce an event queue) to accept incoming packets of the form above. It may set its fee mechanism, DDOS protection techniques, or relayer policies. The callers of the gateways will be required to follow its rules to use the relay services. 
 
 * Would BPP support token transfers?
 
