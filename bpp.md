@@ -27,6 +27,7 @@ Without this standard, every bridging protocol will need to roll out its own swa
 BPP is not a reliable protocol. Packets may be dropped or delivered multiple times. 
 Bridging protocols on top of it are responsible for ensuring reliable or sequential reconstruction of packets. 
 
+| --- | --- | --- | 
 | uint: verion | uint: remaining hops | uint or string: flow type | 
 | --- | --- | --- | 
 | uint: len(src chain_id) | byte[] src chain_id | uint: len(src address) | byte[] src address |
@@ -54,25 +55,30 @@ The specification mirrors the IP packet used to deliver information on the Inter
 * Regardless of the underlying interoperability protocol relaying packets should be a standard and unified operation. 
 
 * How will the transaction fees be paid? 
+
 Any relay provider can register a gateway "smart contract" on-chain (or module at consensus layer) to accept incoming packets of the form above. It may set it own fee mechanism, DDOS protection techniques, or relayer policies. The callers of the gateways will be required to follow its rules to use the relay services. 
 
 * Would BPP support token transfers?
+
 Token transfers require application-level interoperability protocols and typically involve (a) locking tokens on the source chains, (b) relayer the proof, and (c) minting tokens on the destination chain. Hence, any "locker" contract on the source chain can write a packet to the destination chain asking the corresponding "minter" contract to produce the corresponding token. Relayers will simply pass the message across chains. 
 
 * Would BPP support arbitrary message passing across chains? 
+
 Yes, the payload can include any data that must be passed from one chain to another. 
 
 * Will BPP support multi-hop relaying?
+
 Yes. Suppose a packet arrives at the gateway contract. The relayer may either 
 (a) have a direct connection to the destination chain where it can post the packet. The packet will then
 immediately be delivered to the destination address, or
 (b) know the network that can be its "next hop" and post the packet to another gateway deployed on that chain. Subsequent relayers may pick up the packets from the gateway and deliver them to the destination or the next hop network. The relayer should decrement the hop counter by one. 
 
 * Why is it sufficient to gurantee unreliable delivery for this protocol? 
+
 BPP does not try to establish reliable data streams. This is the responsibility of the interoperability protocols sitting on top of it. A relayer may forge a packet, or change its fields, or drop altogether. 
 Regardless, any relayer (or any adversary on the blockchains) may call contracts with arbitrary functions or inputs, and it's the responsibility of the interoperability protocols and blockchains themselves to mitigate those attacks (e.g., DOS is prevented via transaction fees). An interoperability protocol or application that is trying to establish a reliable data stream with a destination contract may retransmit the packet, hoping that another relayer (or a set of relayer) will deliver it to the destination. Regardless, this interoperability protocol must assume an "at least once" delivery from external infrastructure that it cannot control without a direct connection to the destination chain. 
 
-* How do you prevent "framing"? Creating a package on behalf of other folks? Reply destination address, for instance? Add signature of the sender? 
+* How do you prevent packet forging? An optional signature may be added under the sender's address. 
 
 ## Test Cases
 Please add test cases here if applicable.
