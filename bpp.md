@@ -28,13 +28,10 @@ BPP is not a reliable protocol. Packets may be dropped or delivered multiple tim
 Bridging protocols on top of it are responsible for ensuring reliable or sequential reconstruction of packets. 
 
 |     |     |     |
-| --- | --- | --- | 
 | uint: verion | uint: remaining hops | uint or string: flow type | 
-| --- | --- | --- | 
 | uint: len(src chain_id) | byte[] src chain_id | uint: len(src address) | byte[] src address |
-| --- | --- | --- | 
 | uint: len(dst chain_id) | byte[] dst chain_id | uint: len(dst address) | byte[] dst address |
-| uint: len(payload) | byte[] payload | --- |
+| uint: len(payload) | byte[] payload | |
 | Optional: [uint: signature type | uint: sig length | signature of packer under src address] | 
 
 The specification mirrors the IP packet used to deliver information on the Internet. 
