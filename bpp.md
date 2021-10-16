@@ -27,6 +27,7 @@ Without this standard, every bridging protocol will need to roll out its own swa
 BPP is not a reliable protocol. Packets may be dropped or delivered multiple times. 
 Bridging protocols on top of it are responsible for ensuring reliable or sequential reconstruction of packets. 
 
+|     |     |     |
 | --- | --- | --- | 
 | uint: verion | uint: remaining hops | uint or string: flow type | 
 | --- | --- | --- | 
