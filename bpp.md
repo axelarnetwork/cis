@@ -29,58 +29,47 @@ Without this standard, every bridging protocol will need to roll out its own swa
 BPP is not a reliable protocol. Packets may be dropped or delivered multiple times. 
 Bridging protocols on top of it are responsible for ensuring reliable or sequential reconstruction of packets. 
 
-| | | |
-| --- | --- | --- |
-| uint: verion | uint: remaining hops | uint or string: flow type | 
-| uint: len(src chain_id) | byte[] src chain_id | uint: len(src address) | byte[] src address |
-| uint: len(dst chain_id) | byte[] dst chain_id | uint: len(dst address) | byte[] dst address |
-| uint: len(payload) | byte[] payload | |
-| Optional: [uint: signature type | uint: sig length | signature of packet under src address] | 
-
-The specification mirrors the IP packet used to deliver information on the Internet. 
+| Variable Type | Variable Name | Description |
+| --- | --- | --- | 
+| <span style="color:blue">`uint`</span>| `verion` | The protocol version number |  
+| <span style="color:blue">`uint`</span>| `remaining_hops` | We do not want packets to circulate forever from one hop to the next (potentially ending up in a loop). Each time a packet is relayed, the number of remaining hops is decremented by one. Initially, it's set to the maximum number of chain hops the sender decides is reasonable (this may depend on the fee the sender pays to the relayer) |
+|<span style="color:blue">`uint`</span>|`flow_type` | This is an informational field that may help relayers process the traffic. For instance, asset transfers vs general messaging passing packets might be handled differently by the relayers. A separate list of flow types will be recorded (asset transfers, NFT transfers, general message passing, etc.) | 
+| <span style="color:blue">`uint`</span>|`src_chain_id_len` | Byte length of the source chain id that follows | 
+|<span style="color:blue">`byte[]`</span>|`src_chain_id` | Source chain identifier. Following [CAIP-2](https://github.com/ChainAgnostic/CAIPs/blob/master/CAIPs/caip-2.md) | 
+| <span style="color:blue">`uint`</span>|`src_address_len`| Byte length of the sender address | 
+| <span style="color:blue">`byte[]`</span>|`src_address` | Sender of the packet (maybe be empty in some cases where irrelevant.  Typically the sender/receiver will be a higher level interoperability protocol (potentially implemented at the consensus or smart contracts) that is responsible for ensuring a reliable data stream between applications.(chain_id and address may be merged following [CAIP-10](https://github.com/ChainAgnostic/CAIPs/blob/master/CAIPs/caip-10.md)) | 
+| <span style="color:blue">`uint`</span>|`dst_chain_id_len` | Byte length of the destination chain identifier | 
+| <span style="color:blue">`byte[]`</span>|`dst_chain_id` | Destination chain identifier | 
+| <span style="color:blue">`uint`</span>|`dst_address_len`| Byte length of the destination address | 
+| <span style="color:blue">`byte[]`</span>|`dst_address` | Destination address | 
+| <span style="color:blue">`uint`</span>|`payload_len`| Byte length of the payload | 
+| <span style="color:blue">`byte[]`</span>|`payload` | Payload |
 
 * uint = 4 bytes. All other fields are variable length. 
-* Version: the protocol version number. 
-* Remaining hops: we do not want packets to circulate forever from one hop to the next (potentially ending up in a loop). Each time a packet is relayed, the number of remaining hops is decremented by one. 
-* Flow type identifier: specifies asset class, type of interoperability protocol, or information that is propagated. 
-* src/dst chain_id: source/destination chain identifier. Potentially following: https://github.com/ChainAgnostic/CAIPs/blob/master/CAIPs/caip-2.md
-* src/dst address: the sender/receiver of the packet. Typically the sender/receiver will be a higher level interoperability protocol (potentially implemented at the consensus or smart contracts) that is responsible for ensuring a reliable data stream between applications. [chain_id and address may be merged following: https://github.com/ChainAgnostic/CAIPs/blob/master/CAIPs/caip-10.md]
-* payload: the message that needs to be transmitted from one chain to another. 
-* (TODO) signature: some packets might be signed under the sender's address. This ensures that no forged packets may be created. This field is optional.
-
- packet must be signed 
+* (TO DISCUSS) Adding a signature under the sender's address where applicable: some packets might be signed under the sender's address. This ensures that no forged packets may be created.
 
 ## Rationale
 
-* In a multi-chain world, relaying packets from one network to another is a basic requirement. Regardless of the underlying interoperability protocol, relaying packets should be a standard and unified operation. 
+- In a multi-chain world, relaying packets from one network to another is a basic requirement. Regardless of the underlying interoperability protocol, relaying packets should be a standard and unified operation. 
 
-* How will the transaction fees be paid? 
+- **Who pays the the transaction fees?**
+Any relay provider can register a gateway "smart contract" on-chain (or module at consensus layer or introduce an event queue) to accept incoming packets of the form above. It may set its fee mechanism, DDOS protection techniques, or relayer policies. The callers of the gateways will be required to follow its rules to use the relay services and pay any fees required. 
 
-Any relay provider can register a gateway "smart contract" on-chain (or module at consensus layer or introduce an event queue) to accept incoming packets of the form above. It may set its fee mechanism, DDOS protection techniques, or relayer policies. The callers of the gateways will be required to follow its rules to use the relay services. 
+- **Would BPP support token transfers?** Token transfers require application-level interoperability protocols and typically involve (a) locking tokens on the source chains, (b) relayer the proof, and (c) minting tokens on the destination chain. Hence, any "locker" contract on the source chain can write a packet to the destination chain asking the corresponding "minter" contract to produce the corresponding token. Relayers will simply pass the message across chains. 
 
-* Would BPP support token transfers?
+- **Would BPP support arbitrary message passing across chains?** Yes, the payload can include any data that must be passed from one chain to another. 
 
-Token transfers require application-level interoperability protocols and typically involve (a) locking tokens on the source chains, (b) relayer the proof, and (c) minting tokens on the destination chain. Hence, any "locker" contract on the source chain can write a packet to the destination chain asking the corresponding "minter" contract to produce the corresponding token. Relayers will simply pass the message across chains. 
-
-* Would BPP support arbitrary message passing across chains? 
-
-Yes, the payload can include any data that must be passed from one chain to another. 
-
-* Will BPP support multi-hop relaying?
-
-Yes. Suppose a packet arrives at the gateway contract. The relayer may either 
+- **Will BPP support multi-hop relaying?**  Yes. Suppose a packet arrives at the gateway contract. The relayer may either 
 (a) have a direct connection to the destination chain where it can post the packet. The packet will then
 immediately be delivered to the destination address, or
 (b) know the network that can be its "next hop" and post the packet to another gateway deployed on that chain. Subsequent relayers may pick up the packets from the gateway and deliver them to the destination or the next hop network. The relayer should decrement the hop counter by one. 
 
-* Why is it sufficient to gurantee unreliable delivery for this protocol? 
+- **Why is it sufficient to gurantee unreliable delivery for this protocol?** BPP does not try to establish reliable data streams. This is the responsibility of the interoperability protocols sitting on top of BPP. A relayer may forge a packet, or change its fields, or drop altogether. An interoperability protocol or application that aims to establish a reliable data stream across separate chains needs to decide how to handle undelivered packets or forged requests. 
+For instance, the protocol may retransmit the packet to the same or different gateway, waiting for the same relayer to deliver the packet to the destination. 
 
-BPP does not try to establish reliable data streams. This is the responsibility of the interoperability protocols sitting on top of it. A relayer may forge a packet, or change its fields, or drop altogether. 
-Regardless, any relayer (or any adversary on the blockchains) may call contracts with arbitrary functions or inputs, and it's the responsibility of the interoperability protocols and blockchains themselves to mitigate those attacks (e.g., DOS is prevented via transaction fees). An interoperability protocol or application that is trying to establish a reliable data stream with a destination contract may retransmit the packet, hoping that another relayer (or a set of relayer) will deliver it to the destination. Regardless, this interoperability protocol must assume an "at least once" delivery from external infrastructure that it cannot control without a direct connection to the destination chain. 
 
-* How do you prevent packet forging? An optional signature may be added under the sender's address. 
+- **How do you prevent packet forging?** An optional signature may be added under the sender's address. This is not aplicable when a caller is a smart contract. 
 
 ## Test Cases
-Please add test cases here if applicable.
 
 
